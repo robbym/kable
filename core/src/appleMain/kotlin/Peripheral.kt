@@ -79,9 +79,14 @@ public actual class Peripheral internal constructor(
     private val _events = BroadcastChannel<Event>(1)
     public actual val events: Flow<Event> = _events.asFlow()
 
+    internal val platformServices: List<PlatformService>? = null
+
     // todo: Is CBPeripheral.services `null` until service discovery?
-    public actual val services: List<Service>?
-        get() = cbPeripheral.services?.map { Service(it as CBService) }
+    public actual val services: List<DiscoveredService>?
+        get() = cbPeripheral.services?.map { service ->
+            service as CBService
+            service.toPlatformService().toDiscoveredService()
+        }
 
     private val _characteristicChange = BroadcastChannel<CharacteristicChange>(BUFFERED)
 
@@ -142,7 +147,7 @@ public actual class Peripheral internal constructor(
     }
 
     @Throws(CancellationException::class, IOException::class)
-    public actual suspend fun discoverServices(): Unit = discoverServices(services = null)
+    private suspend fun discoverServices(): Unit = discoverServices(services = null)
 
     /** @param services to discover (list of service UUIDs), or `null` for all. */
     @Throws(CancellationException::class, IOException::class)

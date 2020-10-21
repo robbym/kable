@@ -31,8 +31,8 @@ kotlin {
             kotlin.srcDir("src/appleMain/kotlin")
 
             dependencies {
-                implementation(coroutines("core"), version = "1.3.9-native-mt-2!!")
-                implementation("co.touchlab:stately-isolate-macosx64:1.1.1-a1")
+                implementation(coroutines("core", version = "1.3.9-native-mt-2!!"))
+                implementation(stately("isolate-macosx64"))
             }
         }
         val macosX64Test by getting { kotlin.srcDir("src/appleTest/kotlin") }

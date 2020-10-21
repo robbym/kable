@@ -9,11 +9,13 @@ import kotlinx.coroutines.withContext
 import platform.CoreBluetooth.CBCentralManager
 import platform.CoreBluetooth.CBCharacteristic
 import platform.CoreBluetooth.CBCharacteristicWriteType
+import platform.CoreBluetooth.CBDescriptor
 import platform.CoreBluetooth.CBManagerStatePoweredOn
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBService
 import platform.CoreBluetooth.CBUUID
 import platform.Foundation.NSData
+import platform.Foundation.NSLog
 import kotlin.coroutines.CoroutineContext
 import kotlin.native.concurrent.freeze
 
@@ -130,7 +132,7 @@ internal class CentralManager(
         cbCharacteristic: CBCharacteristic,
     ) {
         withContext(dispatcher) {
-            println("observe ${cbCharacteristic.UUID}")
+            NSLog("Observe ${cbCharacteristic.UUID}")
             if (observers.increment(cbCharacteristic.UUID) == 1) {
                 println("setNotifyValue(true, ${cbCharacteristic.UUID})")
                 cbPeripheral.setNotifyValue(true, cbCharacteristic)
@@ -140,12 +142,46 @@ internal class CentralManager(
 
     suspend fun cancelNotify(
         cbPeripheral: CBPeripheral,
-        cbCharacteristic: CBCharacteristic,
+        characteristic: Characteristic,
     ) {
         withContext(dispatcher) {
+            val cbCharacteristic = cbCharacteristicFrom(peripheral, characteristic)
             if (observers.decrement(cbCharacteristic.UUID) == 0) {
                 cbPeripheral.setNotifyValue(false, cbCharacteristic)
             }
         }
+    }
+
+    internal fun cbCharacteristicFrom(
+        peripheral: Peripheral,
+        characteristic: Characteristic,
+    ): CBCharacteristic {
+        val services = checkNotNull(peripheral.platformServices) {
+            "Services have not been discovered for $this"
+        }
+        val characteristics = services
+            .first { it.serviceUuid == characteristic.serviceUuid }
+            .characteristics
+        return characteristics
+            .first { it.characteristicUuid == characteristic.characteristicUuid }
+            .cbCharacteristic
+    }
+
+    private fun cbDescriptorFrom(
+        peripheral: Peripheral,
+        descriptor: Descriptor,
+    ): CBDescriptor {
+        val services = checkNotNull(peripheral.platformServices) {
+            "Services have not been discovered for $this"
+        }
+        val characteristics = services
+            .first { it.serviceUuid == descriptor.serviceUuid }
+            .characteristics
+        val descriptors = characteristics
+            .first { it.characteristicUuid == descriptor.characteristicUuid }
+            .descriptors
+        return descriptors
+            .first { it.descriptorUuid == descriptor.descriptorUuid }
+            .cbDescriptor
     }
 }
