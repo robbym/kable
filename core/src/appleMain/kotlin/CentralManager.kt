@@ -151,37 +151,4 @@ internal class CentralManager(
             }
         }
     }
-
-    internal fun cbCharacteristicFrom(
-        peripheral: Peripheral,
-        characteristic: Characteristic,
-    ): CBCharacteristic {
-        val services = checkNotNull(peripheral.platformServices) {
-            "Services have not been discovered for $this"
-        }
-        val characteristics = services
-            .first { it.serviceUuid == characteristic.serviceUuid }
-            .characteristics
-        return characteristics
-            .first { it.characteristicUuid == characteristic.characteristicUuid }
-            .cbCharacteristic
-    }
-
-    private fun cbDescriptorFrom(
-        peripheral: Peripheral,
-        descriptor: Descriptor,
-    ): CBDescriptor {
-        val services = checkNotNull(peripheral.platformServices) {
-            "Services have not been discovered for $this"
-        }
-        val characteristics = services
-            .first { it.serviceUuid == descriptor.serviceUuid }
-            .characteristics
-        val descriptors = characteristics
-            .first { it.characteristicUuid == descriptor.characteristicUuid }
-            .descriptors
-        return descriptors
-            .first { it.descriptorUuid == descriptor.descriptorUuid }
-            .cbDescriptor
-    }
 }

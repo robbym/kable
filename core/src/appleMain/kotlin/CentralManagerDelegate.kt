@@ -5,14 +5,12 @@ import com.juul.kable.CentralManagerDelegate.ConnectionEvent.DidDisconnect
 import com.juul.kable.CentralManagerDelegate.ConnectionEvent.DidFailToConnect
 import com.juul.kable.CentralManagerDelegate.Response.DidDiscoverPeripheral
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.runBlocking
 import platform.CoreBluetooth.CBCentralManager
@@ -27,10 +25,8 @@ import kotlin.native.concurrent.freeze
 
 internal class CentralManagerDelegate : NSObject(), CBCentralManagerDelegateProtocol {
 
-    // todo: Use MutableStateFlow when Kotlin/kotlinx.coroutines#2226 is fixed.
-    // https://github.com/Kotlin/kotlinx.coroutines/issues/2226
-    private val _state = BroadcastChannel<CBManagerState>(CONFLATED)
-    val state: Flow<CBManagerState> = _state.asFlow()
+    private val _state = MutableStateFlow<CBManagerState?>(null)
+    val state: Flow<CBManagerState> = _state.filterNotNull()
 
     sealed class Response {
 
@@ -115,7 +111,7 @@ internal class CentralManagerDelegate : NSObject(), CBCentralManagerDelegateProt
     override fun centralManagerDidUpdateState(
         central: CBCentralManager
     ): Unit {
-        _state.offer(central.state)
+        _state.value = central.state
     }
 }
 

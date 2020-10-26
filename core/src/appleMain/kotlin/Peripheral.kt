@@ -31,9 +31,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import platform.CoreBluetooth.CBCharacteristic
 import platform.CoreBluetooth.CBCharacteristicWriteType
 import platform.CoreBluetooth.CBCharacteristicWriteWithResponse
 import platform.CoreBluetooth.CBCharacteristicWriteWithoutResponse
+import platform.CoreBluetooth.CBDescriptor
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBService
 import platform.CoreBluetooth.CBUUID
@@ -71,11 +73,10 @@ public actual class Peripheral internal constructor(
         }
 
     // fixme: Use MutableSharedFlow; a buffer of 1 here will **not** exhibit the desired behavior.
-    // We want the connection handling control flow to pause until event has been processed
-    // (rendezvous style). With a buffer of 1, we won't wait (for example) a Connected event to be
-    // processed before proceeding. So it doesn't give a library consumer the ability to do
-    // connection setup (e.g. discover services) via the Connected event prior to a Connected state
-    // being emitted.
+    // We want the connection handling control flow to pause until event has been processed (rendezvous style). With a
+    // buffer of 1, we won't wait (for example) for a Connected event to be processed before proceeding. So it doesn't
+    // give a library consumer the ability to do connection setup (e.g. discover services) via the Connected event prior
+    // to a Connected state being emitted.
     private val _events = BroadcastChannel<Event>(1)
     public actual val events: Flow<Event> = _events.asFlow()
 
@@ -248,6 +249,37 @@ public actual class Peripheral internal constructor(
         val error = response.error
         if (error != null) throw IOException(error.description)
     }
+}
+
+internal fun Peripheral.cbCharacteristicFrom(
+    characteristic: Characteristic,
+): CBCharacteristic {
+    val services = checkNotNull(platformServices) {
+        "Services have not been discovered for $this"
+    }
+    val characteristics = services
+        .first { it.serviceUuid == characteristic.serviceUuid }
+        .characteristics
+    return characteristics
+        .first { it.characteristicUuid == characteristic.characteristicUuid }
+        .cbCharacteristic
+}
+
+private fun Peripheral.cbDescriptorFrom(
+    descriptor: Descriptor,
+): CBDescriptor {
+    val services = checkNotNull(platformServices) {
+        "Services have not been discovered for $this"
+    }
+    val characteristics = services
+        .first { it.serviceUuid == descriptor.serviceUuid }
+        .characteristics
+    val descriptors = characteristics
+        .first { it.characteristicUuid == descriptor.characteristicUuid }
+        .descriptors
+    return descriptors
+        .first { it.descriptorUuid == descriptor.descriptorUuid }
+        .cbDescriptor
 }
 
 private data class CharacteristicChange(
